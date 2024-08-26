@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Gambar dengan Penjelasan</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    
+    <!-- Firebase Version 7 -->
+    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-storage.js"></script>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+    <div class="max-w-4xl mx-auto py-10">
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-4">Upload Gambar dengan Penjelasan</h1>
+
+            <!-- Form Upload Gambar dan Penjelasan -->
+            <form id="uploadForm">
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-semibold mb-2" for="imageUpload">Pilih Gambar</label>
+                    <input type="file" id="imageUpload" accept="image/*" class="block w-full text-gray-700">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-semibold mb-2" for="description">Penjelasan Gambar</label>
+                    <textarea id="description" rows="4" class="block w-full text-gray-700 border border-gray-300 rounded-md p-2" placeholder="Tulis penjelasan gambar di sini..."></textarea>
+                </div>
+
+                <div class="mb-6">
+                    <button type="button" onclick="uploadImage()" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                        Unggah
+                    </button>
+                </div>
+            </form>
+
+            <!-- Status Upload dan Pratinjau Gambar -->
+            <div id="uploadStatus" class="hidden">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Status Unggahan</h2>
+                <p id="statusMessage" class="text-gray-700"></p>
+            </div>
+        </div>
+
+        <!-- Daftar Gambar yang Diunggah -->
+        <div id="uploadedImages" class="mt-10">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Gambar yang Diunggah</h2>
+            <div id="imageList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </div>
+    </div>
+
+    <script>
+        // Konfigurasi Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCyN6VMRDCm0Z1Xeo54Cu7gOTfvV0r2ENU",
+            authDomain: "mfa354-86a8c.firebaseapp.com",
+            projectId: "mfa354-86a8c",
+            storageBucket: "mfa354-86a8c.appspot.com",
+            messagingSenderId: "550609684206",
+            appId: "1:550609684206:web:8eb544985e0d468c5855ff",
+            measurementId: "G-KRVK8ZE0XF"
+        };
+
+        // Inisialisasi Firebase
+        firebase.initializeApp(firebaseConfig);
+        const storage = firebase.storage();
+
+        function uploadImage() {
+            const imageInput = document.getElementById('imageUpload');
+            const descriptionInput = document.getElementById('description');
+            const statusMessage = document.getElementById('statusMessage');
+            const uploadStatus = document.getElementById('uploadStatus');
+            const imageList = document.getElementById('imageList');
+
+            // Dapatkan file gambar
+            if (imageInput.files.length > 0) {
+                const imgFile = imageInput.files[0];
+                const imgRef = storage.ref('images/' + imgFile.name);
+                
+                // Upload gambar ke Firebase Storage
+                imgRef.put(imgFile).then((snapshot) => {
+                    // Dapatkan URL gambar yang diunggah
+                    imgRef.getDownloadURL().then((url) => {
+                        const description = descriptionInput.value;
+
+                        // Tampilkan status dan tambahkan gambar ke daftar
+                        statusMessage.innerHTML = `<p>Gambar berhasil diunggah. <a href="${url}" target="_blank" class="text-blue-500">Lihat Gambar</a></p>`;
+                        uploadStatus.classList.remove('hidden');
+
+                        const imageCard = `
+                            <div class="bg-white p-4 rounded-lg shadow-md">
+                                <img src="${url}" alt="Gambar" class="w-full h-auto mb-4 rounded">
+                                <p class="text-gray-700">${description}</p>
+                            </div>`;
+                        
+                        imageList.innerHTML += imageCard;
+                    });
+                }).catch((error) => {
+                    statusMessage.innerHTML = `<p class="text-red-500">Gagal mengunggah gambar: ${error.message}</p>`;
+                    uploadStatus.classList.remove('hidden');
+                });
+            } else {
+                statusMessage.innerHTML = `<p class="text-red-500">Pilih gambar terlebih dahulu!</p>`;
+                uploadStatus.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
