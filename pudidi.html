@@ -9,6 +9,7 @@
     <!-- Firebase Version 7 -->
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-storage.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-firestore.js"></script>
 </head>
 <body class="bg-gray-100 font-sans leading-normal tracking-normal">
     <div class="max-w-4xl mx-auto py-10">
@@ -63,7 +64,9 @@
         // Inisialisasi Firebase
         firebase.initializeApp(firebaseConfig);
         const storage = firebase.storage();
+        const db = firebase.firestore();
 
+        // Fungsi untuk mengunggah gambar
         function uploadImage() {
             const imageInput = document.getElementById('imageUpload');
             const descriptionInput = document.getElementById('description');
@@ -71,30 +74,48 @@
             const uploadStatus = document.getElementById('uploadStatus');
             const imageList = document.getElementById('imageList');
 
-            // Dapatkan file gambar
             if (imageInput.files.length > 0) {
                 const imgFile = imageInput.files[0];
                 const imgRef = storage.ref('images/' + imgFile.name);
                 
-                // Upload gambar ke Firebase Storage
                 imgRef.put(imgFile).then((snapshot) => {
-                    // Dapatkan URL gambar yang diunggah
+                    console.log("Unggahan berhasil:", snapshot);
+
                     imgRef.getDownloadURL().then((url) => {
+                        console.log("URL gambar:", url);
                         const description = descriptionInput.value;
 
-                        // Tampilkan status dan tambahkan gambar ke daftar
-                        statusMessage.innerHTML = `<p>Gambar berhasil diunggah. <a href="${url}" target="_blank" class="text-blue-500">Lihat Gambar</a></p>`;
-                        uploadStatus.classList.remove('hidden');
+                        // Simpan data gambar ke Firestore
+                        db.collection("uploadedImages").add({
+                            url: url,
+                            description: description,
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                        }).then((docRef) => {
+                            console.log("Data gambar tersimpan dengan ID:", docRef.id);
 
-                        const imageCard = `
-                            <div class="bg-white p-4 rounded-lg shadow-md">
-                                <img src="${url}" alt="Gambar" class="w-full h-auto mb-4 rounded">
-                                <p class="text-gray-700">${description}</p>
-                            </div>`;
-                        
-                        imageList.innerHTML += imageCard;
+                            // Tampilkan status dan tambahkan gambar ke daftar
+                            statusMessage.innerHTML = `<p>Gambar berhasil diunggah. <a href="${url}" target="_blank" class="text-blue-500">Lihat Gambar</a></p>`;
+                            uploadStatus.classList.remove('hidden');
+
+                            const imageCard = `
+                                <div class="bg-white p-4 rounded-lg shadow-md">
+                                    <img src="${url}" alt="Gambar" class="w-full h-auto mb-4 rounded">
+                                    <p class="text-gray-700">${description}</p>
+                                </div>`;
+                            
+                            imageList.innerHTML += imageCard;
+
+                            // Bersihkan input
+                            imageInput.value = '';
+                            descriptionInput.value = '';
+                        }).catch((error) => {
+                            console.error("Gagal menyimpan data gambar:", error);
+                            statusMessage.innerHTML = `<p class="text-red-500">Gagal menyimpan data gambar: ${error.message}</p>`;
+                            uploadStatus.classList.remove('hidden');
+                        });
                     });
                 }).catch((error) => {
+                    console.error("Gagal mengunggah gambar:", error);
                     statusMessage.innerHTML = `<p class="text-red-500">Gagal mengunggah gambar: ${error.message}</p>`;
                     uploadStatus.classList.remove('hidden');
                 });
@@ -103,6 +124,30 @@
                 uploadStatus.classList.remove('hidden');
             }
         }
+
+        // Fungsi untuk memuat gambar yang sudah diunggah dari Firestore
+        function loadUploadedImages() {
+            const imageList = document.getElementById('imageList');
+            imageList.innerHTML = '';
+
+            db.collection("uploadedImages").orderBy("timestamp", "desc").get().then((querySnapshot) => {
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const imageCard = `
+                        <div class="bg-white p-4 rounded-lg shadow-md">
+                            <img src="${data.url}" alt="Gambar" class="w-full h-auto mb-4 rounded">
+                            <p class="text-gray-700">${data.description}</p>
+                        </div>`;
+                    
+                    imageList.innerHTML += imageCard;
+                });
+            }).catch((error) => {
+                console.error("Gagal memuat gambar:", error);
+            });
+        }
+
+        // Panggil fungsi untuk memuat gambar saat halaman dimuat
+        window.onload = loadUploadedImages;
     </script>
 </body>
 </html>
